@@ -1,29 +1,31 @@
 import fetch from 'node-fetch';
-import admin from 'firebase-admin';
+
 
 // Initialize Firebase
-admin.initializeApp({
-  databaseURL: process.env.FIREBASE_DATABASE_URL,
-});
 
-const db = admin.database();
+
+
 
 /**
  * Scheduled job that runs every Monday at 2 AM
  * Fetches news, processes with AI, and updates database
  */
+export const maxDuration = 60;
+
 export default async function handler(req, res) {
   // Verify Vercel cron secret for security
   if (req.query.token !== process.env.CRON_TOKEN) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
+  const dbUrl = process.env.FIREBASE_DATABASE_URL;
+
   try {
     console.log('🚀 Starting cron job - Fetching trending news...');
 
     // Step 1: Fetch news from NewsAPI
     const newsResponse = await fetch(
-      `https://newsapi.org/v2/top-headlines?country=us&pageSize=50&sortBy=popularity&apiKey=${process.env.NEWS_API_KEY}`
+      `https://newsapi.org/v2/top-headlines?country=us&pageSize=20&sortBy=popularity&apiKey=${process.env.NEWS_API_KEY}`
     );
     const newsData = await newsResponse.json();
 
@@ -34,47 +36,34 @@ export default async function handler(req, res) {
     console.log(`✅ Fetched ${newsData.articles.length} articles from NewsAPI`);
 
     // Step 2: Process articles with AI (summarize, categorize)
-    const processedArticles = await Promise.all(
-      newsData.articles.map(async (article) => {
-        try {
-          const summary = await summarizeWithAI(article.description);
-          const category = categorizeArticle(article.title, article.description);
+    const processedArticles = [];
+    for (const article of newsData.articles) {
+      try {
+        const summary = await summarizeWithAI(article.description);
+        const category = categorizeArticle(article.title, article.description);
+        processedArticles.push({ ...article, summary, category, processedAt: new Date().toISOString(), trending: true });
+      } catch (err) {
+        processedArticles.push(article);
+      }
+    }
 
-          return {
-            ...article,
-            summary,
-            category,
-            processedAt: new Date().toISOString(),
-            trending: true,
-          };
-        } catch (error) {
-          console.error('Error processing article:', error);
-          return article;
-        }
+    const rankedArticles = processedArticles.sort((a, b) => calculateTrendingScore(b) - calculateTrendingScore(a));
+
+    await fetch(`${dbUrl}/trending-news.json`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        articles: rankedArticles,
+        lastUpdated: new Date().toISOString(),
       })
-    );
-
-    // Step 3: Sort by relevance and trending score
-    const rankedArticles = processedArticles.sort((a, b) => {
-      const scoreA = calculateTrendingScore(a);
-      const scoreB = calculateTrendingScore(b);
-      return scoreB - scoreA;
     });
 
-    // Step 4: Save to Firebase
-    await db.ref('trending-news').set({
-      articles: rankedArticles.slice(0, 100), // Keep top 100
-      lastUpdated: new Date().toISOString(),
-      updateCount: (await db.ref('metadata/updateCount').once('value')).val() + 1 || 1,
-    });
-
-    console.log('✅ Successfully updated database with new trending news');
-
-    // Step 5: Update metadata
-    await db.ref('metadata').update({
-      lastUpdate: new Date().toISOString(),
-      articleCount: rankedArticles.length,
-      status: 'success',
+    await fetch(`${dbUrl}/metadata.json`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        lastUpdate: new Date().toISOString(),
+        articleCount: rankedArticles.length,
+        status: 'success',
+      })
     });
 
     return res.status(200).json({
@@ -82,16 +71,16 @@ export default async function handler(req, res) {
       message: 'News updated successfully',
       articlesProcessed: rankedArticles.length,
       timestamp: new Date().toISOString(),
-    });
+    })});
 
   } catch (error) {
     console.error('❌ Cron job failed:', error);
 
     // Log error to database
-    await db.ref('logs/errors').push({
+    await fetch(`${dbUrl}/logs/errors.json`, { method: 'POST', body: JSON.stringify({
       error: error.message,
       timestamp: new Date().toISOString(),
-    });
+    })});
 
     return res.status(500).json({
       success: false,

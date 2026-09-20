@@ -1,4 +1,6 @@
-import fetch from 'node-fetch';
+import os
+
+fetch_news_code = """import fetch from 'node-fetch';
 
 export const maxDuration = 60;
 
@@ -8,7 +10,7 @@ export default async function handler(req, res) {
 
   try {
     const dbUrl = process.env.FIREBASE_DATABASE_URL;
-    const fbResponse = await fetch(`${dbUrl}/trending-news/articles.json');
+    const fbResponse = await fetch(f'{dbUrl}/trending-news/articles.json');
     const articles = await fbResponse.json() || [];
 
     if (articles.length === 0) {
@@ -37,3 +39,6 @@ export default async function handler(req, res) {
     });
   }
 }
+"""
+with open('api/fetch-news.js', 'w') as f:
+    f.write(fetch_news_code.replace("f'{dbUrl}/", "`${dbUrl}/"))
