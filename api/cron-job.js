@@ -35,16 +35,21 @@ export default async function handler(req, res) {
     console.log(`✅ Fetched ${newsData.articles.length} articles from NewsAPI`);
 
     // Step 2: Process articles with AI (summarize, categorize)
-    const processedArticles = [];
-    for (const article of newsData.articles) {
+    const processPromises = newsData.articles.map(async (article) => {
       try {
-        const summary = await summarizeWithAI(article.description);
+        // Timeout the HF call so we don't crash the whole function
+        const summaryPromise = summarizeWithAI(article.description);
+        const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(article.description), 4000));
+        const summary = await Promise.race([summaryPromise, timeoutPromise]);
+        
         const category = categorizeArticle(article.title, article.description);
-        processedArticles.push({ ...article, summary, category, processedAt: new Date().toISOString(), trending: true });
+        return { ...article, summary, category, processedAt: new Date().toISOString(), trending: true };
       } catch (err) {
-        processedArticles.push(article);
+        return article;
       }
-    }
+    });
+    
+    const processedArticles = await Promise.all(processPromises);
 
     const rankedArticles = processedArticles.sort((a, b) => calculateTrendingScore(b) - calculateTrendingScore(a));
 
