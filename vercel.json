@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron-job",
+      "schedule": "0 2 * * MON"
+    }
+  ],
+  "env": {
+    "NEWS_API_KEY": "@news_api_key",
+    "FIREBASE_DATABASE_URL": "@firebase_database_url"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "trending-news-website",
+  "version": "1.0.0",
+  "description": "Auto-updating trending news website",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node api/local-cron.js",
+    "deploy": "vercel",
+    "build": "echo 'No build needed'",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-cron": "^3.0.2",
+    "node-fetch": "^2.6.11",
+    "axios": "^1.4.0",
+    "dotenv": "^16.3.1",
+    "firebase-admin": "^11.10.0"
+  },
+  "devDependencies": {
+    "@vercel/node": "^2.15.9"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
