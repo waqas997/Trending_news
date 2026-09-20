@@ -17,15 +17,11 @@ function App() {
     const fetchNews = async () => {
       try {
         // In a real app, you would fetch from your backend here:
-        // const response = await fetch('/api/fetch-news');
-        // const data = await response.json();
-        // setNews(data.articles);
+        const response = await fetch('/api/fetch-news');
+        const data = await response.json();
+        setNews(data.articles);
         
-        // Using mock data for now
-        setTimeout(() => {
-          setNews(mockNews);
-          setLoading(false);
-        }, 500);
+        setLoading(false);
       } catch (error) {
         console.error('Failed to fetch news', error);
         setLoading(false);
