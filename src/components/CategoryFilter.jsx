@@ -1,6 +1,6 @@
 import React from 'react';
 
-const CATEGORIES = ['All', 'Technology', 'Business', 'Health', 'Sports', 'Entertainment', 'Science'];
+const CATEGORIES = ['All', 'Technology', 'Business', 'Health', 'Sports', 'Entertainment', 'General'];
 
 function CategoryFilter({ currentFilter, onFilterChange }) {
   return (
@@ -11,7 +11,7 @@ function CategoryFilter({ currentFilter, onFilterChange }) {
           className={`category-pill ${currentFilter.toLowerCase() === category.toLowerCase() ? 'active' : ''}`}
           onClick={() => onFilterChange(category.toLowerCase())}
         >
-          {category === 'Science' ? 'General / Science' : category}
+          {category}
         </button>
       ))}
     </div>
