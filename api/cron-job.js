@@ -70,7 +70,7 @@ export default async function handler(req, res) {
       message: 'News updated successfully',
       articlesProcessed: rankedArticles.length,
       timestamp: new Date().toISOString(),
-    })});
+    });
 
   } catch (error) {
     console.error('❌ Cron job failed:', error);
@@ -79,7 +79,7 @@ export default async function handler(req, res) {
     await fetch(`${dbUrl}/logs/errors.json`, { method: 'POST', body: JSON.stringify({
       error: error.message,
       timestamp: new Date().toISOString(),
-    })});
+    });
 
     return res.status(500).json({
       success: false,
