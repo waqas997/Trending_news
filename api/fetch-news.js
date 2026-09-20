@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 
 export const maxDuration = 60;
 
