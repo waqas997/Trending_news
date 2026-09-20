@@ -1,16 +1,17 @@
 {
-  "name": "trending-news-website",
-  "version": "1.0.0",
-  "description": "Auto-updating trending news website",
-  "main": "index.js",
+  "name": "client",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node api/local-cron.js",
-    "deploy": "vercel",
-    "build": "cd client && npm install && npm run build",
-    "start": "node server.js"
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "oxlint",
+    "preview": "vite preview"
   },
   "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "express": "^4.18.2",
     "node-cron": "^3.0.2",
     "node-fetch": "^2.6.11",
@@ -19,7 +20,11 @@
     "firebase-admin": "^11.10.0"
   },
   "devDependencies": {
-    "@vercel/node": "^2.15.9"
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "oxlint": "^1.81.0",
+    "vite": "^8.3.0"
   },
   "engines": {
     "node": "24.x"
