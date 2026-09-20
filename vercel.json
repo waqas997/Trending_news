@@ -21,9 +21,5 @@
       "path": "/api/cron-job",
       "schedule": "0 2 * * 1"
     }
-  ],
-  "env": {
-    "NEWS_API_KEY": "@news_api_key",
-    "FIREBASE_DATABASE_URL": "@firebase_database_url"
-  }
+  ]
 }
