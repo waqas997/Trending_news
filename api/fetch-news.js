@@ -2,13 +2,16 @@
 export const maxDuration = 60;
 
 export default async function handler(req, res) {
-  res.setHeader('Cache-Control', 'max-age=3600');
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   try {
     const dbUrl = process.env.FIREBASE_DATABASE_URL;
     const fbResponse = await fetch(`${dbUrl}/trending-news/articles.json`);
-    const articles = await fbResponse.json() || [];
+    let articles = await fbResponse.json() || [];
+    if (!Array.isArray(articles)) {
+        articles = [];
+    }
+
 
     if (articles.length === 0) {
       const response = await fetch(
@@ -16,13 +19,15 @@ export default async function handler(req, res) {
       );
       const data = await response.json();
 
-      return res.status(200).json({
+      res.setHeader('Cache-Control', 'max-age=3600');
+    return res.status(200).json({
         success: true,
         articles: data.articles || [],
         source: 'newsapi',
       });
     }
 
+    res.setHeader('Cache-Control', 'max-age=3600');
     return res.status(200).json({
       success: true,
       articles,
