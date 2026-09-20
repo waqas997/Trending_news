@@ -84,7 +84,7 @@ export default async function handler(req, res) {
     await fetch(`${dbUrl}/logs/errors.json`, { method: 'POST', body: JSON.stringify({
       error: error.message,
       timestamp: new Date().toISOString(),
-    });
+    })});
 
     return res.status(500).json({
       success: false,
