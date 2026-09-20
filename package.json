@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node api/local-cron.js",
     "deploy": "vercel",
-    "build": "echo 'No build needed'",
+    "build": "cd client && npm install && npm run build",
     "start": "node server.js"
   },
   "dependencies": {
