@@ -3,7 +3,7 @@ import StatusHeader from '../components/StatusHeader';
 import CategoryFilter from '../components/CategoryFilter';
 import NewsCard from '../components/NewsCard';
 
-function GridView({ news, loading, currentFilter, onFilterChange, onArticleClick, totalCount }) {
+function GridView({ news, loading, currentFilter, onFilterChange, onArticleClick, totalCount, currentPage, totalPages, onPageChange }) {
   return (
     <section id="grid-view">
       <StatusHeader totalCount={totalCount} />
@@ -25,6 +25,27 @@ function GridView({ news, loading, currentFilter, onFilterChange, onArticleClick
           ))
         )}
       </div>
+      {totalPages > 1 && !loading && (
+        <div className="pagination">
+          <button 
+            className="pagination-btn" 
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            &laquo; Previous
+          </button>
+          <span className="pagination-info">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button 
+            className="pagination-btn" 
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next &raquo;
+          </button>
+        </div>
+      )}
     </section>
   );
 }

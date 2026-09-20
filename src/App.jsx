@@ -11,6 +11,8 @@ function App() {
   const [currentFilter, setCurrentFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const CARDS_PER_PAGE = 10;
 
   useEffect(() => {
     // Simulate API fetch
@@ -31,6 +33,10 @@ function App() {
     fetchNews();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [currentFilter, searchQuery]);
+
   const filteredNews = news.filter(article => {
     const matchesFilter = currentFilter === 'all' || (article.category || '').toLowerCase() === currentFilter.toLowerCase();
     const matchesSearch = !searchQuery || 
@@ -38,6 +44,10 @@ function App() {
                           (article.description || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const totalPages = Math.ceil(filteredNews.length / CARDS_PER_PAGE);
+  const startIndex = (currentPage - 1) * CARDS_PER_PAGE;
+  const paginatedNews = filteredNews.slice(startIndex, startIndex + CARDS_PER_PAGE);
 
   return (
     <>
@@ -51,12 +61,15 @@ function App() {
           />
         ) : (
           <GridView 
-            news={filteredNews}
+            news={paginatedNews}
             loading={loading}
             currentFilter={currentFilter}
             onFilterChange={setCurrentFilter}
             onArticleClick={setSelectedArticle}
-            totalCount={news.length}
+            totalCount={filteredNews.length}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
           />
         )}
       </main>
