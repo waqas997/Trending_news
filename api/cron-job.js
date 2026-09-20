@@ -121,11 +121,11 @@ function categorizeArticle(title, description) {
   const text = `${title} ${description}`.toLowerCase();
 
   const categories = {
-    technology: ['ai', 'tech', 'software', 'app', 'digital', 'cyber', 'robot', 'code'],
-    business: ['business', 'market', 'stock', 'economy', 'trade', 'company', 'sales'],
-    health: ['health', 'medical', 'hospital', 'disease', 'virus', 'doctor', 'vaccine'],
-    sports: ['sports', 'football', 'basketball', 'soccer', 'game', 'player', 'team'],
-    entertainment: ['movie', 'music', 'celebrity', 'film', 'actor', 'show', 'award'],
+    technology: ['ai', 'tech', 'software', 'app', 'digital', 'cyber', 'robot', 'code', 'apple', 'google', 'microsoft', 'tesla', 'crypto', 'bitcoin', 'internet', 'web'],
+    business: ['business', 'market', 'stock', 'economy', 'trade', 'company', 'sales', 'ceo', 'startup', 'finance', 'wall street', 'bank', 'investor'],
+    health: ['health', 'medical', 'hospital', 'disease', 'virus', 'doctor', 'vaccine', 'cancer', 'fda', 'diet', 'nutrition', 'fitness', 'mental'],
+    sports: ['sports', 'football', 'basketball', 'soccer', 'game', 'player', 'team', 'ufc', 'mma', 'nfl', 'nba', 'mlb', 'nhl', 'wwe', 'tennis', 'golf', 'olympics', 'championship'],
+    entertainment: ['movie', 'music', 'celebrity', 'film', 'actor', 'show', 'award', 'hollywood', 'netflix', 'disney', 'star', 'singer', 'album', 'concert'],
   };
 
   for (const [category, keywords] of Object.entries(categories)) {
