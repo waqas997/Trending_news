@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
   try {
     const dbUrl = process.env.FIREBASE_DATABASE_URL;
-    const fbResponse = await fetch(`${dbUrl}/trending-news/articles.json');
+    const fbResponse = await fetch(`${dbUrl}/trending-news/articles.json`);
     const articles = await fbResponse.json() || [];
 
     if (articles.length === 0) {
