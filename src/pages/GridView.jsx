@@ -1,52 +1,80 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import StatusHeader from '../components/StatusHeader';
 import CategoryFilter from '../components/CategoryFilter';
 import NewsCard from '../components/NewsCard';
 
-function GridView({ news, loading, currentFilter, onFilterChange, onArticleClick, totalCount, currentPage, totalPages, onPageChange }) {
+function GridView({ news, loading, currentFilter, onFilterChange, totalCount, hasMore, loadMore }) {
+  const loaderRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMore && !loading) {
+        loadMore();
+      }
+    }, { threshold: 0.1 });
+
+    if (loaderRef.current) {
+      observer.observe(loaderRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadMore]);
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Trending News",
+    "description": "Discover the latest trending news globally and locally.",
+    "url": window.location.href,
+  };
+
   return (
-    <section id="grid-view">
-      <StatusHeader totalCount={totalCount} />
-      <CategoryFilter currentFilter={currentFilter} onFilterChange={onFilterChange} />
+    <>
+      <Helmet>
+        <title>Trending News | Global AI & Market Updates</title>
+        <meta name="description" content="Discover the latest trending news globally and locally. Stay updated on AI, tech, markets, and more." />
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      </Helmet>
       
-      <div className="news-grid">
-        {loading ? (
-          <div className="loading">
-            <div className="spinner"></div>
-            <p>Synthesizing global news trends...</p>
-          </div>
-        ) : news.length === 0 ? (
-          <div className="loading">
-            <p>No articles found for this category or search.</p>
-          </div>
-        ) : (
-          news.map((article, idx) => (
-            <NewsCard key={idx} article={article} onClick={onArticleClick} />
-          ))
-        )}
-      </div>
-      {totalPages > 1 && !loading && (
-        <div className="pagination">
-          <button 
-            className="pagination-btn" 
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            &laquo; Previous
-          </button>
-          <span className="pagination-info">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button 
-            className="pagination-btn" 
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Next &raquo;
-          </button>
+      <section id="grid-view">
+        <StatusHeader totalCount={totalCount} />
+        <CategoryFilter currentFilter={currentFilter} onFilterChange={onFilterChange} />
+        
+        <div className="news-grid">
+          {loading ? (
+            <div className="loading">
+              <div className="spinner"></div>
+              <p>Synthesizing global news trends...</p>
+            </div>
+          ) : news.length === 0 ? (
+            <div className="loading">
+              <p>No articles found for this category or search.</p>
+            </div>
+          ) : (
+            news.map((article, idx) => (
+              <NewsCard key={idx} article={article} />
+            ))
+          )}
         </div>
-      )}
-    </section>
+        
+        {/* Infinite Scroll Loader */}
+        {!loading && hasMore && (
+          <div ref={loaderRef} className="infinite-scroll-loader" style={{ textAlign: 'center', padding: '20px' }}>
+            <div className="spinner" style={{ display: 'inline-block', width: '20px', height: '20px' }}></div>
+            <p style={{ marginTop: '10px' }}>Loading more articles...</p>
+          </div>
+        )}
+        
+        {!loading && !hasMore && news.length > 0 && (
+          <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
+            <p>You have reached the end of the news.</p>
+          </div>
+        )}
+      </section>
+    </>
   );
 }
 

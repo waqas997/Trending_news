@@ -5,6 +5,7 @@
 
 
 
+import { GoogleGenAI } from '@google/genai';
 /**
  * Scheduled job that runs every Monday at 2 AM
  * Fetches news, processes with AI, and updates database
@@ -95,22 +96,21 @@ export default async function handler(req, res) {
 }
 
 /**
- * Summarize article description using Hugging Face API
+ * Summarize article description using Gemini API
  */
 async function summarizeWithAI(text) {
   if (!text || text.length < 20) return text;
+  if (!process.env.GEMINI_API_KEY) return text;
 
   try {
-    const response = await fetch('https://api-inference.huggingface.co/models/facebook/bart-large-cnn', {
-      headers: { Authorization: `Bearer ${process.env.HUGGING_FACE_API_KEY}` },
-      method: 'POST',
-      body: JSON.stringify({ inputs: text.substring(0, 1024) }), // Limit to 1024 chars
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `Summarize the following news article briefly in one or two sentences:\n\n${text.substring(0, 2000)}`,
     });
-
-    const result = await response.json();
-
-    if (Array.isArray(result) && result[0]) {
-      return result[0].summary_text || text;
+    
+    if (response.text) {
+      return response.text;
     }
     return text;
   } catch (error) {

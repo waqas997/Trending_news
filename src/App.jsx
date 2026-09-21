@@ -1,28 +1,46 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
+import BottomNav from './components/BottomNav';
 import GridView from './pages/GridView';
 import ArticleView from './pages/ArticleView';
-import { mockNews } from './data/mockData';
 
 function App() {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentFilter, setCurrentFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedArticle, setSelectedArticle] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const CARDS_PER_PAGE = 10;
+  const [visibleCount, setVisibleCount] = useState(10);
+  const CARDS_PER_BATCH = 10;
+  const location = useLocation();
+
+  const [selectedCountry, setSelectedCountry] = useState('global');
 
   useEffect(() => {
-    // Simulate API fetch
-    const fetchNews = async () => {
+    // Detect user country via IP
+    const detectCountry = async () => {
       try {
-        // In a real app, you would fetch from your backend here:
-        const response = await fetch('/api/fetch-news');
+        const ipRes = await fetch('https://ipapi.co/json/');
+        const ipData = await ipRes.json();
+        if (ipData && ipData.country_code) {
+          const code = ipData.country_code.toLowerCase();
+          setSelectedCountry(code);
+        }
+      } catch (err) {
+        console.error('Failed to detect country', err);
+      }
+    };
+    detectCountry();
+  }, []);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/fetch-news?country=${selectedCountry}`);
         const data = await response.json();
-        setNews(data.articles);
-        
+        setNews(data.articles || []);
         setLoading(false);
       } catch (error) {
         console.error('Failed to fetch news', error);
@@ -30,12 +48,14 @@ function App() {
       }
     };
 
-    fetchNews();
-  }, []);
+    if (selectedCountry) {
+      fetchNews();
+    }
+  }, [selectedCountry]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [currentFilter, searchQuery]);
+    setVisibleCount(CARDS_PER_BATCH);
+  }, [currentFilter, searchQuery, selectedCountry]);
 
   const filteredNews = news.filter(article => {
     const matchesFilter = currentFilter === 'all' || (article.category || '').toLowerCase() === currentFilter.toLowerCase();
@@ -45,36 +65,48 @@ function App() {
     return matchesFilter && matchesSearch;
   });
 
-  const totalPages = Math.ceil(filteredNews.length / CARDS_PER_PAGE);
-  const startIndex = (currentPage - 1) * CARDS_PER_PAGE;
-  const paginatedNews = filteredNews.slice(startIndex, startIndex + CARDS_PER_PAGE);
+  const hasMore = visibleCount < filteredNews.length;
+  const visibleNews = filteredNews.slice(0, visibleCount);
+
+  const loadMore = () => {
+    setVisibleCount(prev => prev + CARDS_PER_BATCH);
+  };
+
+  const isArticlePage = location.pathname.startsWith('/article/');
 
   return (
     <>
-      <Navigation onSearch={setSearchQuery} />
+      <Navigation 
+        onSearch={setSearchQuery} 
+        selectedCountry={selectedCountry}
+        onCountryChange={setSelectedCountry}
+      />
       
-      <main className="main-container">
-        {selectedArticle ? (
-          <ArticleView 
-            article={selectedArticle} 
-            onBack={() => setSelectedArticle(null)} 
+      <main className={`main-container ${isArticlePage ? "article-view-container" : ""}`}>
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              <GridView 
+                news={visibleNews}
+                loading={loading}
+                currentFilter={currentFilter}
+                onFilterChange={setCurrentFilter}
+                totalCount={filteredNews.length}
+                hasMore={hasMore}
+                loadMore={loadMore}
+              />
+            } 
           />
-        ) : (
-          <GridView 
-            news={paginatedNews}
-            loading={loading}
-            currentFilter={currentFilter}
-            onFilterChange={setCurrentFilter}
-            onArticleClick={setSelectedArticle}
-            totalCount={filteredNews.length}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
+          <Route 
+            path="/article/:slug" 
+            element={<ArticleView news={news} loading={loading} />} 
           />
-        )}
+        </Routes>
       </main>
 
       <Footer />
+      <BottomNav />
     </>
   );
 }

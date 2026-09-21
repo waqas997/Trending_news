@@ -7,6 +7,7 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'https://trending-news-one.vercel.app',
+        // target: 'http://localhost:3000',
         changeOrigin: true,
       }
     }
