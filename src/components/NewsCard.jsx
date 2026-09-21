@@ -17,15 +17,16 @@ function NewsCard({ article }) {
     setBookmarked(!bookmarked);
   };
 
-  const articleSlug = createSlug(article.title);
+  const articleSlug = article.slug || createSlug(article.title);
 
   return (
-    <Link to={`/article/${articleSlug}`} className="news-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-      <article>
+    <Link to={`/article/${articleSlug}`} state={{ article }} className="news-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+      <article style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div className="card-image-wrapper">
           <img 
             src={article.urlToImage || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'} 
-            alt={article.title} 
+            alt={article.imageAlt || article.title} 
+            loading="lazy"
             onError={(e) => {e.target.src = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'}}
           />
           <div className="card-badges">

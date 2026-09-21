@@ -7,7 +7,7 @@ function StatusHeader({ totalCount }) {
         <span className="status-dot pulse"></span>
         <span>Live Feed Active</span>
         <span className="divider">•</span>
-        <span>Refreshes weekly with AI synthesis</span>
+        <span>Refreshes daily with AI synthesis</span>
         <span className="badge-automated">v2.4 Automated</span>
       </div>
       <div className="stats-right">

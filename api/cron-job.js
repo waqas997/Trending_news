@@ -2,19 +2,17 @@
 
 // Initialize Firebase
 
-
-
-
 import { GoogleGenAI } from '@google/genai';
 /**
- * Scheduled job that runs every Monday at 2 AM
+ * Scheduled job that runs every day at 2 AM
  * Fetches news, processes with AI, and updates database
  */
 export const maxDuration = 60;
 
 export default async function handler(req, res) {
-  // Verify Vercel cron secret for security
-  if (false && req.query.token !== process.env.CRON_TOKEN) {
+  // Verify Vercel cron secret for security (Phase 25)
+  const authHeader = req.headers.authorization;
+  if (authHeader !== `Bearer ${process.env.CRON_TOKEN}` && req.query.token !== process.env.CRON_TOKEN) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
@@ -35,6 +33,15 @@ export default async function handler(req, res) {
 
     console.log(`✅ Fetched ${newsData.articles.length} articles from NewsAPI`);
 
+    // Helper to generate a slug
+    const createSlug = (title) => {
+      if (!title) return '';
+      return title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '');
+    };
+
     // Step 2: Process articles with AI (summarize, categorize)
     const processPromises = newsData.articles.map(async (article) => {
       try {
@@ -44,7 +51,22 @@ export default async function handler(req, res) {
         const summary = await Promise.race([summaryPromise, timeoutPromise]);
         
         const category = categorizeArticle(article.title, article.description);
-        return { ...article, summary, category, processedAt: new Date().toISOString(), trending: true };
+        const slug = createSlug(article.title);
+
+        return { 
+          ...article, 
+          slug,
+          summary, 
+          category, 
+          topic: category, // Phase 11
+          source: {
+            name: article.source?.name || 'Unknown Source',
+            url: article.url
+          },
+          imageAlt: article.title,
+          processedAt: new Date().toISOString(), 
+          trending: true 
+        };
       } catch (err) {
         return article;
       }
@@ -52,21 +74,26 @@ export default async function handler(req, res) {
     
     const processedArticles = await Promise.all(processPromises);
 
-    const rankedArticles = processedArticles.sort((a, b) => calculateTrendingScore(b) - calculateTrendingScore(a));
+    // Filter out articles with no title or slug
+    const validArticles = processedArticles.filter(a => a.slug);
 
-    await fetch(`${dbUrl}/trending-news.json`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        articles: rankedArticles,
-        lastUpdated: new Date().toISOString(),
-      })
+    // Create an object map keyed by slug (Phase 22, 23)
+    const articlesMap = {};
+    validArticles.forEach(article => {
+      articlesMap[article.slug] = article;
     });
 
-    await fetch(`${dbUrl}/metadata.json`, {
+    // Patch the articles to Firebase (adds/updates without deleting existing)
+    await fetch(`${dbUrl}/trending-news/articles.json`, {
+      method: 'PATCH',
+      body: JSON.stringify(articlesMap)
+    });
+
+    await fetch(`${dbUrl}/trending-news/metadata.json`, {
       method: 'PATCH',
       body: JSON.stringify({
         lastUpdate: new Date().toISOString(),
-        articleCount: rankedArticles.length,
+        latestArticlesProcessed: validArticles.length,
         status: 'success',
       })
     });
@@ -74,7 +101,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       message: 'News updated successfully',
-      articlesProcessed: rankedArticles.length,
+      articlesProcessed: validArticles.length,
       timestamp: new Date().toISOString(),
     });
 
@@ -126,11 +153,11 @@ function categorizeArticle(title, description) {
   const text = `${title} ${description}`.toLowerCase();
 
   const categories = {
-    technology: ['ai', 'tech', 'software', 'app', 'digital', 'cyber', 'robot', 'code', 'apple', 'google', 'microsoft', 'tesla', 'crypto', 'bitcoin', 'internet', 'web'],
-    business: ['business', 'market', 'stock', 'economy', 'trade', 'company', 'sales', 'ceo', 'startup', 'finance', 'wall street', 'bank', 'investor'],
-    health: ['health', 'medical', 'hospital', 'disease', 'virus', 'doctor', 'vaccine', 'cancer', 'fda', 'diet', 'nutrition', 'fitness', 'mental'],
-    sports: ['sports', 'football', 'basketball', 'soccer', 'game', 'player', 'team', 'ufc', 'mma', 'nfl', 'nba', 'mlb', 'nhl', 'wwe', 'tennis', 'golf', 'olympics', 'championship'],
-    entertainment: ['movie', 'music', 'celebrity', 'film', 'actor', 'show', 'award', 'hollywood', 'netflix', 'disney', 'star', 'singer', 'album', 'concert'],
+    'AI News': ['ai', 'tech', 'software', 'digital', 'cyber', 'robot'],
+    'AI Tools': ['tool', 'app', 'platform', 'framework'],
+    'AI Coding': ['code', 'developer', 'software', 'programming'],
+    'AI Startups': ['startup', 'founder', 'investment', 'funding'],
+    'AI Apps': ['app', 'ios', 'android', 'mobile', 'web'],
   };
 
   for (const [category, keywords] of Object.entries(categories)) {
@@ -139,32 +166,5 @@ function categorizeArticle(title, description) {
     }
   }
 
-  return 'general';
-}
-
-/**
- * Calculate trending score based on various factors
- */
-function calculateTrendingScore(article) {
-  let score = 0;
-
-  // Recency (newer = higher score)
-  const hoursOld = (Date.now() - new Date(article.publishedAt).getTime()) / (1000 * 60 * 60);
-  score += Math.max(0, 100 - hoursOld * 2);
-
-  // Source reliability
-  const reliableSources = ['BBC', 'Reuters', 'AP News', 'NPR', 'CNN'];
-  if (reliableSources.some(source => article.source?.name?.includes(source))) {
-    score += 30;
-  }
-
-  // Title length (comprehensive titles = higher score)
-  score += Math.min(20, article.title?.length / 5 || 0);
-
-  // Has image
-  if (article.urlToImage) {
-    score += 15;
-  }
-
-  return score;
+  return 'General';
 }

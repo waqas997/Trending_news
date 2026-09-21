@@ -1,4 +1,3 @@
-
 export const maxDuration = 60;
 
 export default async function handler(req, res) {
@@ -9,10 +8,16 @@ export default async function handler(req, res) {
     
     const dbUrl = process.env.FIREBASE_DATABASE_URL;
     const fbResponse = await fetch(`${dbUrl}/trending-news/articles.json`);
-    let globalArticles = await fbResponse.json() || [];
-    if (!Array.isArray(globalArticles)) {
-        globalArticles = [];
+    const articlesData = await fbResponse.json();
+    
+    // Firebase returns an object map keyed by slug. Convert to array.
+    let globalArticles = [];
+    if (articlesData && typeof articlesData === 'object') {
+      globalArticles = Object.values(articlesData);
     }
+
+    // Sort globally fetched articles by publishedAt descending
+    globalArticles.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
 
     let localArticles = [];
     
@@ -35,7 +40,17 @@ export default async function handler(req, res) {
         const localData = await localRes.json();
         if (localData && localData.articles) {
           // Add a local flag so frontend can highlight them if needed
-          localArticles = localData.articles.map(article => ({...article, isLocal: true, trending: true}));
+          localArticles = localData.articles.map(article => {
+             // Create slug for local articles on the fly since they bypass cron
+             const slug = (article.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+             return {
+                 ...article, 
+                 slug,
+                 isLocal: true, 
+                 trending: true,
+                 source: { name: article.source?.name || 'Unknown', url: article.url },
+             };
+          }).filter(a => a.slug);
         }
       } catch (err) {
         console.error('Failed to fetch local news from NewsAPI', err);
@@ -43,9 +58,9 @@ export default async function handler(req, res) {
     }
 
     // Merge local news on top of global news
-    // Filter out global news that might be duplicates (by title or url)
-    const localTitles = new Set(localArticles.map(a => a.title));
-    const filteredGlobal = globalArticles.filter(a => !localTitles.has(a.title));
+    // Filter out global news that might be duplicates (by slug)
+    const localSlugs = new Set(localArticles.map(a => a.slug));
+    const filteredGlobal = globalArticles.filter(a => !localSlugs.has(a.slug));
     
     const finalArticles = [...localArticles, ...filteredGlobal];
 

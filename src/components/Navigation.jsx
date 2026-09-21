@@ -31,7 +31,7 @@ function Navigation({ onSearch, selectedCountry, onCountryChange }) {
           <button className="menu-btn mobile-hidden"><i className="fa-solid fa-bars"></i></button>
           <div className="logo-container">
             <h1>TRENDING NEWS</h1>
-            <p className="mobile-hidden">Updated automatically every week with AI-powered summaries</p>
+            <p className="mobile-hidden">Updated automatically every day with AI-powered summaries</p>
           </div>
         </div>
         <button className="profile-btn desktop-hidden"><i className="fa-regular fa-user"></i></button>

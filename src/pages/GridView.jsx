@@ -4,7 +4,7 @@ import StatusHeader from '../components/StatusHeader';
 import CategoryFilter from '../components/CategoryFilter';
 import NewsCard from '../components/NewsCard';
 
-function GridView({ news, loading, currentFilter, onFilterChange, totalCount, hasMore, loadMore }) {
+function GridView({ news, loading, currentFilter, onFilterChange, totalCount, hasMore, loadMore, seoOverrides }) {
   const loaderRef = useRef(null);
 
   useEffect(() => {
@@ -21,25 +21,29 @@ function GridView({ news, loading, currentFilter, onFilterChange, totalCount, ha
     return () => observer.disconnect();
   }, [hasMore, loading, loadMore]);
 
+  const pageTitle = seoOverrides?.title || "Trending News | Global AI & Market Updates";
+  const pageDescription = seoOverrides?.description || "Discover the latest trending news globally and locally. Stay updated on AI, tech, markets, and more.";
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    "name": "Trending News",
-    "description": "Discover the latest trending news globally and locally.",
+    "name": pageTitle,
+    "description": pageDescription,
     "url": window.location.href,
   };
 
   return (
     <>
       <Helmet>
-        <title>Trending News | Global AI & Market Updates</title>
-        <meta name="description" content="Discover the latest trending news globally and locally. Stay updated on AI, tech, markets, and more." />
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
         <script type="application/ld+json">
           {JSON.stringify(structuredData)}
         </script>
       </Helmet>
       
       <section id="grid-view">
+        {seoOverrides?.h1 && <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>{seoOverrides.h1}</h1>}
         <StatusHeader totalCount={totalCount} />
         <CategoryFilter currentFilter={currentFilter} onFilterChange={onFilterChange} />
         

@@ -371,13 +371,13 @@ h1, h2, h3, h4, h5, h6, .article-title {
   font-size: 0.95rem;
   line-height: 1.6;
   margin-bottom: 20px;
-  flex-grow: 1;
 }
 
 .card-meta {
   font-size: 0.8rem;
   color: #888;
   margin-bottom: 20px;
+  margin-top: auto;
 }
 
 .card-read-btn {
