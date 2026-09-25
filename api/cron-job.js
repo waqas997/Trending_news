@@ -1,8 +1,7 @@
-
+import { TwitterApi } from 'twitter-api-v2';
 
 // Initialize Firebase
 
-import { GoogleGenAI } from '@google/genai';
 /**
  * Scheduled job that runs every day at 2 AM
  * Fetches news, processes with AI, and updates database
@@ -21,7 +20,7 @@ export default async function handler(req, res) {
   try {
     console.log('🚀 Starting cron job - Fetching trending news...');
 
-    // Step 1: Fetch news from NewsAPI
+    // Step 1: Fetch general top headlines so all categories are populated
     const newsResponse = await fetch(
       `https://newsapi.org/v2/top-headlines?country=us&pageSize=20&sortBy=popularity&apiKey=${process.env.NEWS_API_KEY}`
     );
@@ -98,6 +97,35 @@ export default async function handler(req, res) {
       })
     });
 
+    // --- TWITTER INTEGRATION ---
+    if (process.env.TWITTER_API_KEY && process.env.TWITTER_API_SECRET && process.env.TWITTER_ACCESS_TOKEN && process.env.TWITTER_ACCESS_SECRET) {
+      try {
+        const twitterClient = new TwitterApi({
+          appKey: process.env.TWITTER_API_KEY,
+          appSecret: process.env.TWITTER_API_SECRET,
+          accessToken: process.env.TWITTER_ACCESS_TOKEN,
+          accessSecret: process.env.TWITTER_ACCESS_SECRET,
+        });
+
+        const rwClient = twitterClient.readWrite;
+
+        // Take the top most popular article that was just summarized
+        if (validArticles.length > 0) {
+          const topArticle = validArticles[0];
+          // Construct tweet text. Keep it under 280 characters.
+          const shortUrl = topArticle.url;
+          const tag = `#TrendingNews #${topArticle.category.replace(/[^a-zA-Z]/g, '')}`;
+          const safeSummary = topArticle.aiSummary ? topArticle.aiSummary.substring(0, 100) + '...' : '';
+          const tweetText = `Trending in ${topArticle.category}: ${topArticle.title}\n\n${safeSummary}\n\nRead more: ${shortUrl} ${tag}`;
+          
+          await rwClient.v2.tweet(tweetText.substring(0, 280));
+          console.log('✅ Successfully posted to Twitter!');
+        }
+      } catch (twError) {
+        console.error('❌ Failed to post to Twitter:', twError);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: 'News updated successfully',
@@ -123,22 +151,42 @@ export default async function handler(req, res) {
 }
 
 /**
- * Summarize article description using Gemini API
+ * Summarize article description using AWS Bedrock via AI Proxy
  */
 async function summarizeWithAI(text) {
   if (!text || text.length < 20) return text;
-  if (!process.env.GEMINI_API_KEY) return text;
+  
+  const token = process.env.AWS_BEARER_TOKEN_BEDROCK;
+  if (!token) return text;
 
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: `Summarize the following news article briefly in one or two sentences:\n\n${text.substring(0, 2000)}`,
+    // If you use a specific gateway for Bedrock, set AI_PROXY_URL in .env
+    const baseUrl = process.env.AI_PROXY_URL || 'https://api.openai.com/v1';
+    const model = process.env.AI_MODEL || 'anthropic.claude-3-haiku-20240307-v1:0';
+
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'user', content: `Summarize the following news article briefly in one or two sentences:\n\n${text.substring(0, 2000)}` }
+        ]
+      })
     });
     
-    if (response.text) {
-      return response.text;
+    if (!response.ok) {
+      throw new Error(`AI API error: ${response.status} ${response.statusText}`);
     }
+
+    const data = await response.json();
+    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+      return data.choices[0].message.content;
+    }
+    
     return text;
   } catch (error) {
     console.error('AI summarization failed:', error);
@@ -147,21 +195,21 @@ async function summarizeWithAI(text) {
 }
 
 /**
- * Categorize article based on keywords
+ * Categorize article based on keywords for standard news categories
  */
 function categorizeArticle(title, description) {
   const text = `${title} ${description}`.toLowerCase();
 
   const categories = {
-    'AI News': ['ai', 'tech', 'software', 'digital', 'cyber', 'robot'],
-    'AI Tools': ['tool', 'app', 'platform', 'framework'],
-    'AI Coding': ['code', 'developer', 'software', 'programming'],
-    'AI Startups': ['startup', 'founder', 'investment', 'funding'],
-    'AI Apps': ['app', 'ios', 'android', 'mobile', 'web'],
+    'Technology': ['tech', 'software', 'digital', 'cyber', 'robot', 'ai', 'apple', 'google', 'microsoft', 'app', 'code'],
+    'Business': ['business', 'market', 'stock', 'economy', 'startup', 'finance', 'ceo', 'company', 'bank'],
+    'Sports': ['sport', 'football', 'cricket', 'nba', 'nfl', 'soccer', 'tennis', 'match', 'tournament', 'player', 'coach', 'team', 'champion'],
+    'Health': ['health', 'medical', 'disease', 'hospital', 'doctor', 'virus', 'covid', 'vaccine', 'patient', 'study'],
+    'Entertainment': ['movie', 'film', 'music', 'actor', 'actress', 'hollywood', 'celebrity', 'song', 'album', 'star', 'cinema'],
   };
 
   for (const [category, keywords] of Object.entries(categories)) {
-    if (keywords.some(keyword => text.includes(keyword))) {
+    if (keywords.some(keyword => new RegExp(`\\b${keyword}\\b`).test(text))) {
       return category;
     }
   }

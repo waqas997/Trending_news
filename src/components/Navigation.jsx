@@ -3,6 +3,7 @@ import countryList from 'country-list';
 
 function Navigation({ onSearch, selectedCountry, onCountryChange }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
   const dropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -23,6 +24,10 @@ function Navigation({ onSearch, selectedCountry, onCountryChange }) {
     { code: 'global', name: 'Global' },
     ...countries.map(c => ({ code: c.code.toLowerCase(), name: c.name }))
   ];
+
+  const filteredCountries = COUNTRIES.filter(c => 
+    c.name.toLowerCase().includes(countrySearch.toLowerCase())
+  );
 
   return (
     <nav className="top-nav">
@@ -60,20 +65,36 @@ function Navigation({ onSearch, selectedCountry, onCountryChange }) {
           </button>
 
           {isDropdownOpen && (
-            <ul className="custom-select-menu">
-              {COUNTRIES.map(country => (
-                <li
-                  key={country.code}
-                  onClick={() => {
-                    onCountryChange(country.code);
-                    setIsDropdownOpen(false);
-                  }}
-                  className={selectedCountry === country.code ? 'selected' : ''}
-                >
-                  {country.name}
-                </li>
-              ))}
-            </ul>
+            <div className="custom-select-menu">
+              <div className="country-search-box">
+                <input 
+                  type="text" 
+                  placeholder="Search country..." 
+                  value={countrySearch}
+                  onChange={(e) => setCountrySearch(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  autoFocus
+                />
+              </div>
+              <ul className="country-list">
+                {filteredCountries.map(country => (
+                  <li
+                    key={country.code}
+                    onClick={() => {
+                      onCountryChange(country.code);
+                      setIsDropdownOpen(false);
+                      setCountrySearch('');
+                    }}
+                    className={selectedCountry === country.code ? 'selected' : ''}
+                  >
+                    {country.name}
+                  </li>
+                ))}
+                {filteredCountries.length === 0 && (
+                  <li className="no-results">No countries found</li>
+                )}
+              </ul>
+            </div>
           )}
         </div>
         <button className="profile-btn mobile-hidden"><i className="fa-regular fa-user"></i></button>
